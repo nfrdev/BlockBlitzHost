@@ -34,10 +34,11 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 private val Context.blockBlitzDataStore: DataStore<Preferences> by preferencesDataStore(name = "blockblitz_prefs")
@@ -45,11 +46,15 @@ private val Context.blockBlitzDataStore: DataStore<Preferences> by preferencesDa
 private class BlockBlitzViewModelFactory(
     private val context: Context,
 ) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+    override fun <T : ViewModel> create(
+        modelClass: Class<T>,
+        extras: CreationExtras,
+    ): T {
         @Suppress("UNCHECKED_CAST")
         return BlockBlitzViewModel(
             dataStore = context.applicationContext.blockBlitzDataStore,
-            savedStateHandle = SavedStateHandle(),
+            // Use the Activity-owned handle so the JSON game snapshot survives process recreation.
+            savedStateHandle = extras.createSavedStateHandle(),
         ) as T
     }
 }

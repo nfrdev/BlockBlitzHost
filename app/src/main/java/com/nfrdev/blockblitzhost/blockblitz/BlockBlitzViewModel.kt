@@ -32,6 +32,7 @@ class BlockBlitzViewModel(
         }
     }.getOrDefault(0)
 
+    // SavedStateHandle restores the active board, score, spirit, line count, and status.
     private val restoredState: GameEngine.ViewState = savedStateHandle.get<String>(savedStateKey)
         ?.let { raw ->
             runCatching {
@@ -55,14 +56,13 @@ class BlockBlitzViewModel(
                     SerializedViewState.fromViewState(mergedState)
                 )
 
-                if (state.gameStatus == GameStatus.GameOver) {
-                    val best = currentHighScore()
-                    val nextBest = maxOf(best, state.score)
-                    if (nextBest != best) {
-                        viewModelScope.launch {
-                            dataStore.edit { preferences ->
-                                preferences[highScoreKey] = nextBest
-                            }
+                val best = currentHighScore()
+                val nextBest = maxOf(best, state.score)
+                if (nextBest != best) {
+                    savedStateHandle["blockblitz_high_score"] = nextBest
+                    viewModelScope.launch {
+                        dataStore.edit { preferences ->
+                            preferences[highScoreKey] = nextBest
                         }
                     }
                 }
