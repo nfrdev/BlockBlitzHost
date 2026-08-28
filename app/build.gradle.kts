@@ -29,5 +29,6 @@ kotlin {
 dependencies {
     implementation("androidx.compose.runtime:runtime:1.10.0")
     implementation("androidx.compose.ui:ui-text:1.10.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
+
+    testImplementation("junit:junit:4.13.2")
 }
