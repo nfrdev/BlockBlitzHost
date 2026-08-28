@@ -1,6 +1,7 @@
 package com.nfrdev.blockblitzhost.blockblitz
 
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +60,14 @@ fun BlockBlitzScreen(
     onExit: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState = state
+
+    BackHandler {
+        when {
+            uiState.gameStatus == GameStatus.Running -> viewModel.dispatch(Action.Pause)
+            else -> onExit()
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -203,8 +212,12 @@ fun BlockBlitzScreen(
                 GameButton("Rotate") { viewModel.dispatch(Action.Rotate) }
                 GameButton("Soft Drop") { viewModel.dispatch(Action.Move(Direction.Down)) }
                 GameButton("Hard Drop") { viewModel.dispatch(Action.Drop) }
-                GameButton(if (state.isPaused) "Resume" else "Pause") {
-                    if (state.isPaused) viewModel.dispatch(Action.Resume) else viewModel.dispatch(Action.Pause)
+                GameButton(if (uiState.gameStatus == GameStatus.Running) "Pause" else "Resume") {
+                    if (uiState.gameStatus == GameStatus.Running) {
+                        viewModel.dispatch(Action.Pause)
+                    } else {
+                        viewModel.dispatch(Action.Resume)
+                    }
                 }
             }
         }
