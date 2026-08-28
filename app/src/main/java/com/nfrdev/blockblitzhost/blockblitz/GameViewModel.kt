@@ -1,11 +1,11 @@
-package com.jetgame.tetris.logic
+package com.nfrdev.blockblitzhost.blockblitz
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jetgame.tetris.logic.Spirit.Companion.Empty
+import com.nfrdev.blockblitzhost.blockblitz.Spirit.Companion.Empty
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

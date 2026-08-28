@@ -1,4 +1,4 @@
-package com.jetgame.tetris.logic
+package com.nfrdev.blockblitzhost.blockblitz
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -15,8 +15,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import com.jetgame.tetris.R
 
-
-fun Offset(x: Int, y: Int) = androidx.compose.ui.geometry.Offset(x.toFloat(), y.toFloat())
 
 enum class Direction {
     Left, Up, Right, Down
