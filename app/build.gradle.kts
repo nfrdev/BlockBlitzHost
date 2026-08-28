@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.21"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.1.21"
 }
 
@@ -13,6 +14,10 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
@@ -32,7 +37,9 @@ dependencies {
 
     implementation(composeBom)
     implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-text")
+    implementation("androidx.compose.material3:material3")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
