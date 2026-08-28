@@ -1,13 +1,13 @@
 package com.nfrdev.blockblitzhost.blockblitz
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nfrdev.blockblitzhost.blockblitz.Spirit.Companion.Empty
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
@@ -15,8 +15,8 @@ import kotlin.math.min
 
 class GameViewModel : ViewModel() {
 
-    private val _viewState: MutableState<ViewState> = mutableStateOf(ViewState())
-    val viewState : State<ViewState> = _viewState
+    private val _viewState = MutableStateFlow(ViewState())
+    val viewState: StateFlow<ViewState> = _viewState.asStateFlow()
 
 
     fun dispatch(action: Action) =
