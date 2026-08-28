@@ -1,0 +1,7 @@
+com.nfrdev.blockblitzhost
+font unidream_led
+raw clean
+raw drop
+raw move
+raw rotate
+raw start

@@ -1,0 +1,6 @@
+int font unidream_led 0x0
+int raw clean 0x0
+int raw drop 0x0
+int raw move 0x0
+int raw rotate 0x0
+int raw start 0x0
