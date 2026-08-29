@@ -1,38 +1,25 @@
 package com.nfrdev.blockblitzhost.blockblitz
 
-import kotlin.math.absoluteValue
-import kotlin.random.Random
-
-
 data class Spirit(
     val shape: List<Point> = emptyList(),
     val offset: Point = Point.of(0, 0),
+    val colorIndex: Int = 0,
+    val pieceType: PieceType = PieceType.T,
+    val rotationState: Int = 0 // 0: Spawn, 1: 90° CW, 2: 180°, 3: 270° CW
 ) {
     val location: List<Point> = shape.map { it + offset }
 
     fun moveBy(step: Pair<Int, Int>): Spirit =
         copy(offset = offset + Point.of(step.first, step.second))
 
-    fun rotate(): Spirit {
-        val newShape = shape.toMutableList()
-        for (i in shape.indices) {
-            newShape[i] = Point(shape[i].y, -shape[i].x)
-        }
-        return copy(shape = newShape)
-    }
-
-    fun adjustOffset(matrix: Pair<Int, Int>, adjustY: Boolean = true): Spirit {
-        val yOffset =
-            if (adjustY)
-                (location.minByOrNull { it.y }?.y?.takeIf { it < 0 }?.absoluteValue ?: 0).toInt() +
-                        (location.maxByOrNull { it.y }?.y?.takeIf { it > matrix.second - 1 }
-                            ?.let { matrix.second - it - 1 } ?: 0).toInt()
-            else 0
-        val xOffset =
-            (location.minByOrNull { it.x }?.x?.takeIf { it < 0 }?.absoluteValue ?: 0).toInt() +
-                    (location.maxByOrNull { it.x }?.x?.takeIf { it > matrix.first - 1 }
-                        ?.let { matrix.first - it - 1 } ?: 0).toInt()
-        return moveBy(xOffset to yOffset)
+    /**
+     * Rotates piece shape clockwise by 90 degrees around origin.
+     * O-piece is invariant under rotation.
+     */
+    fun rotateShape(): Spirit {
+        if (pieceType == PieceType.O) return this
+        val newShape = shape.map { Point(-it.y, it.x) }
+        return copy(shape = newShape, rotationState = (rotationState + 1) % 4)
     }
 
     companion object {
@@ -40,28 +27,105 @@ data class Spirit(
     }
 }
 
+fun Spirit.toSpawnState(matrix: Pair<Int, Int>): Spirit {
+    val spawnX = matrix.first / 2 - 1
+    return Spirit(
+        shape = TetrominoShapes.getValue(pieceType),
+        offset = Point.of(spawnX, 1),
+        colorIndex = PieceColorIndices.getValue(pieceType),
+        pieceType = pieceType,
+        rotationState = 0
+    )
+}
 
-val SpiritType = listOf(
-    listOf(Point.of(1, -1), Point.of(1, 0), Point.of(0, 0), Point.of(0, 1)),//Z
-    listOf(Point.of(0, -1), Point.of(0, 0), Point.of(1, 0), Point.of(1, 1)),//S
-    listOf(Point.of(0, -1), Point.of(0, 0), Point.of(0, 1), Point.of(0, 2)),//I
-    listOf(Point.of(0, 1), Point.of(0, 0), Point.of(0, -1), Point.of(1, 0)),//T
-    listOf(Point.of(1, 0), Point.of(0, 0), Point.of(1, -1), Point.of(0, -1)),//O
-    listOf(Point.of(0, -1), Point.of(1, -1), Point.of(1, 0), Point.of(1, 1)),//L
-    listOf(Point.of(1, -1), Point.of(0, -1), Point.of(0, 0), Point.of(0, 1))//J
+enum class PieceType { Z, S, I, T, O, L, J }
+
+val TetrominoShapes = mapOf(
+    PieceType.I to listOf(Point.of(-1, 0), Point.of(0, 0), Point.of(1, 0), Point.of(2, 0)),
+    PieceType.J to listOf(Point.of(-1, -1), Point.of(-1, 0), Point.of(0, 0), Point.of(1, 0)),
+    PieceType.L to listOf(Point.of(1, -1), Point.of(-1, 0), Point.of(0, 0), Point.of(1, 0)),
+    PieceType.O to listOf(Point.of(0, 0), Point.of(1, 0), Point.of(0, 1), Point.of(1, 1)),
+    PieceType.S to listOf(Point.of(0, 0), Point.of(1, 0), Point.of(-1, 1), Point.of(0, 1)),
+    PieceType.T to listOf(Point.of(0, -1), Point.of(-1, 0), Point.of(0, 0), Point.of(1, 0)),
+    PieceType.Z to listOf(Point.of(-1, 0), Point.of(0, 0), Point.of(0, 1), Point.of(1, 1))
 )
 
+val PieceColorIndices = mapOf(
+    PieceType.I to 0,
+    PieceType.J to 1,
+    PieceType.L to 2,
+    PieceType.O to 3,
+    PieceType.S to 4,
+    PieceType.T to 5,
+    PieceType.Z to 6
+)
 
-fun Spirit.isValidInMatrix(blocks: List<Brick>, matrix: Pair<Int, Int>): Boolean {
-    return location.none { location ->
-        location.x < 0 || location.x > matrix.first - 1 || location.y > matrix.second - 1 ||
-                blocks.any { it.location.x == location.x && it.location.y == location.y }
+/**
+ * Super Rotation System (SRS) Official Guideline Kick Tables
+ *
+ * Coordinates are mapped to screen space where +X is right, +Y is down.
+ * Kick transitions: 0->1, 1->2, 2->3, 3->0 (Clockwise).
+ */
+private val JLSTZ_KICK_TABLE = mapOf(
+    (0 to 1) to listOf(0 to 0, -1 to 0, -1 to -1, 0 to 2, -1 to 2),
+    (1 to 2) to listOf(0 to 0, 1 to 0, 1 to 1, 0 to -2, 1 to -2),
+    (2 to 3) to listOf(0 to 0, 1 to 0, 1 to -1, 0 to 2, 1 to 2),
+    (3 to 0) to listOf(0 to 0, -1 to 0, -1 to 1, 0 to -2, -1 to -2)
+)
+
+private val I_KICK_TABLE = mapOf(
+    (0 to 1) to listOf(0 to 0, -2 to 0, 1 to 0, -2 to 1, 1 to -2),
+    (1 to 2) to listOf(0 to 0, -1 to 0, 2 to 0, -1 to -2, 2 to 1),
+    (2 to 3) to listOf(0 to 0, 2 to 0, -1 to 0, 2 to -1, -1 to 2),
+    (3 to 0) to listOf(0 to 0, 1 to 0, -2 to 0, 1 to 2, -2 to -1)
+)
+
+/**
+ * Attempts rotation using standard SRS kick offsets.
+ */
+fun Spirit.tryRotate(blockSet: Set<Pair<Int, Int>>, matrix: Pair<Int, Int>): Spirit? {
+    if (pieceType == PieceType.O) return this
+    val fromState = rotationState
+    val toState = (rotationState + 1) % 4
+    val rotated = rotateShape()
+
+    val kicks = if (pieceType == PieceType.I) {
+        I_KICK_TABLE[fromState to toState] ?: listOf(0 to 0)
+    } else {
+        JLSTZ_KICK_TABLE[fromState to toState] ?: listOf(0 to 0)
+    }
+
+    for (kick in kicks) {
+        val kicked = rotated.moveBy(kick)
+        if (kicked.isValidInMatrix(blockSet, matrix)) {
+            return kicked
+        }
+    }
+    return null
+}
+
+fun Spirit.isValidInMatrix(blockSet: Set<Pair<Int, Int>>, matrix: Pair<Int, Int>): Boolean {
+    return location.all { pt ->
+        val x = pt.x.toInt()
+        val y = pt.y.toInt()
+        x in 0 until matrix.first && y < matrix.second && !blockSet.contains(x to y)
     }
 }
 
+fun Spirit.isValidInMatrix(blocks: List<Brick>, matrix: Pair<Int, Int>): Boolean {
+    val blockSet = blocks.map { it.location.x.toInt() to it.location.y.toInt() }.toSet()
+    return isValidInMatrix(blockSet, matrix)
+}
 
-fun generateSpiritReverse(matrix: Pair<Int, Int>): List<Spirit> {
-    return SpiritType.map {
-        Spirit(it, Point.of(Random.nextInt(matrix.first - 1), -1)).adjustOffset(matrix, false)
-    }.shuffled()
+fun generate7Bag(matrix: Pair<Int, Int>): List<Spirit> {
+    val spawnX = matrix.first / 2 - 1
+    return PieceType.entries.shuffled().map { type ->
+        Spirit(
+            shape = TetrominoShapes.getValue(type),
+            offset = Point.of(spawnX, 1),
+            colorIndex = PieceColorIndices.getValue(type),
+            pieceType = type,
+            rotationState = 0
+        )
+    }
 }

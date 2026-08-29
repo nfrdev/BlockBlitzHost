@@ -1,0 +1,42 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+
+# Signing
+*.jks
+*.keystore
+keystore.properties
+
+# Gradle files
+.gradle/
+.kotlin/
+
+# Local configuration file
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Heap dumps
+*.hprof
+
+# OS files
+.DS_Store
+Thumbs.db

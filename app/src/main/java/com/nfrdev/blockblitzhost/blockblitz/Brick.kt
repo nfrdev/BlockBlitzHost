@@ -1,11 +1,14 @@
 package com.nfrdev.blockblitzhost.blockblitz
 
 
-data class Brick(val location: Point = Point.of(0, 0)) {
+data class Brick(
+    val location: Point = Point.of(0, 0),
+    val colorIndex: Int = 0
+) {
     companion object {
-        fun of(pointList: List<Point>) = pointList.map { Brick(it) }
+        fun of(pointList: List<Point>, colorIndex: Int = 0) = pointList.map { Brick(it, colorIndex) }
 
-        fun of(spirit: Spirit) = of(spirit.location)
+        fun of(spirit: Spirit) = spirit.location.map { Brick(it, spirit.colorIndex) }
 
         fun of(xRange: IntRange, yRange: IntRange) =
             of(mutableListOf<Point>().apply {

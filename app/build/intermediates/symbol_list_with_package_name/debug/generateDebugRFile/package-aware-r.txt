@@ -1,7 +1,17 @@
 com.nfrdev.blockblitzhost
+color icon_background
+drawable app_icon
+drawable game_icon
+drawable ic_github
+drawable ic_telegram
 font unidream_led
+mipmap ic_launcher
+mipmap ic_launcher_round
 raw clean
 raw drop
 raw move
 raw rotate
 raw start
+string app_name
+style Theme_BlockBlitz
+xml file_paths
