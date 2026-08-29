@@ -114,7 +114,7 @@ class MainActivity : ComponentActivity() {
                 val updateManager = remember { UpdateManager(this@MainActivity) }
 
                 androidx.compose.runtime.LaunchedEffect(Unit) {
-                    updateInfo = updateManager.checkUpdate("https://raw.githubusercontent.com/nfrdev/BlockBlitzHost/main/version.json")
+                    updateInfo = updateManager.checkUpdate("https://raw.githubusercontent.com/nfrdev/BlockBlitzHost/feature/blockblitz/version.json")
                 }
 
                 androidx.compose.runtime.LaunchedEffect(Unit) {
