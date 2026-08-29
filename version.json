@@ -2,5 +2,7 @@
   "versionCode": 2,
   "versionName": "1.1.0",
   "apkUrl": "https://github.com/nfrdev/BlockBlitzHost/releases/download/v1.1.0/app-release.apk",
-  "updateMessage": "New features and bug fixes!"
+  "updateMessage": "New features and bug fixes!",
+  "forceUpdate": false,
+  "sha256": "e35cc78cf1671fadc8a24c7a60d01af51944da493d0880c360c752f64b3c06f1"
 }
