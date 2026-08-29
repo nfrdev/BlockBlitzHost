@@ -8,5 +8,7 @@ data class UpdateInfo(
     val versionName: String,
     val apkUrl: String,
     val updateMessage: String,
-    val sha256: String? = null
+    val sha256: String? = null,
+    val forceUpdate: Boolean = false,
+    val minSupportedVersionCode: Int = 0
 )

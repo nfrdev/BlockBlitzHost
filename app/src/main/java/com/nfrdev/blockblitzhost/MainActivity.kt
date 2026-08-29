@@ -68,6 +68,7 @@ private val LeaderboardPrefKey = stringPreferencesKey("blockblitz_leaderboard")
 private val ThemePrefKey = stringPreferencesKey("blockblitz_theme")
 private val HapticEnabledPrefKey = booleanPreferencesKey("blockblitz_haptic_enabled")
 private val NotificationsEnabledPrefKey = booleanPreferencesKey("blockblitz_notifications_enabled")
+private val SkippedVersionPrefKey = intPreferencesKey("blockblitz_skipped_version")
 
 private data class PlayerRank(val tier: String, val title: String, val vectorIcon: androidx.compose.ui.graphics.vector.ImageVector, val nextGoal: Int)
 
@@ -114,22 +115,31 @@ class MainActivity : ComponentActivity() {
                 val updateManager = remember { UpdateManager(this@MainActivity) }
 
                 androidx.compose.runtime.LaunchedEffect(Unit) {
-                    updateInfo = updateManager.checkUpdate("https://raw.githubusercontent.com/nfrdev/BlockBlitzHost/feature/blockblitz/version.json")
-                }
-
-                androidx.compose.runtime.LaunchedEffect(Unit) {
                     delay(2500)
                     appState = AppState.Welcome
                 }
-                
+
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    val skipped = blockBlitzDataStore.data.first()[SkippedVersionPrefKey] ?: 0
+                    val info = updateManager.checkUpdate()
+                    if (info != null && (info.forceUpdate || info.versionCode != skipped)) {
+                        updateInfo = info
+                    }
+                }
+
                 updateInfo?.let { info ->
                     UpdateDialog(
                         updateInfo = info,
-                        onDismiss = { updateInfo = null },
-                        onUpdate = {
-                            updateManager.downloadAndInstall(info.apkUrl, info.versionName)
-                            updateInfo = null
-                        }
+                        onDismiss = {
+                            if (!info.forceUpdate) {
+                                lifecycleScope.launch {
+                                    blockBlitzDataStore.edit { it[SkippedVersionPrefKey] = info.versionCode }
+                                }
+                                updateInfo = null
+                            }
+                        },
+                        onUpdate = { updateInfo = null },
+                        updateManager = updateManager
                     )
                 }
 
@@ -169,7 +179,8 @@ class MainActivity : ComponentActivity() {
                                     onPlay = { appState = AppState.Game },
                                     sharedTransitionScope = this@SharedTransitionLayout,
                                     animatedContentScope = this@AnimatedContent,
-                                    onRequestNotificationPermission = { checkNotificationPermission() }
+                                    onRequestNotificationPermission = { checkNotificationPermission() },
+                                    onUpdateFound = { info -> updateInfo = info }
                                 )
                             }
                             AppState.Game -> {
@@ -286,7 +297,8 @@ fun BlockBlitzWelcomeScreen(
     onPlay: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
-    onRequestNotificationPermission: () -> Unit = {}
+    onRequestNotificationPermission: () -> Unit = {},
+    onUpdateFound: (UpdateInfo) -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -756,6 +768,7 @@ fun BlockBlitzWelcomeScreen(
                     isSoundMuted = isSoundMuted,
                     isHapticEnabled = isHapticEnabled,
                     isNotificationsEnabled = isNotificationsEnabled,
+                    updateManager = UpdateManager(context),
                     onThemeSelect = { theme ->
                         coroutineScope.launch { context.blockBlitzDataStore.edit { it[ThemePrefKey] = theme.name } }
                     },
@@ -775,6 +788,10 @@ fun BlockBlitzWelcomeScreen(
                                 WorkManager.getInstance(context).cancelUniqueWork("daily_challenge_work")
                             }
                         }
+                    },
+                    onUpdateFound = { info ->
+                        showSettingsDialog = false
+                        onUpdateFound(info)
                     },
                     onDismiss = { showSettingsDialog = false }
                 )
@@ -979,14 +996,16 @@ private fun PlayerStatsDialog(highScore: Int, gamesPlayed: Int, linesCleared: In
 
 @Composable
 private fun SettingsDialog(
-    currentTheme: GameTheme, 
-    isSoundMuted: Boolean, 
-    isHapticEnabled: Boolean, 
+    currentTheme: GameTheme,
+    isSoundMuted: Boolean,
+    isHapticEnabled: Boolean,
     isNotificationsEnabled: Boolean,
-    onThemeSelect: (GameTheme) -> Unit, 
-    onToggleSound: () -> Unit, 
-    onToggleHaptic: () -> Unit, 
+    updateManager: UpdateManager,
+    onThemeSelect: (GameTheme) -> Unit,
+    onToggleSound: () -> Unit,
+    onToggleHaptic: () -> Unit,
     onToggleNotifications: () -> Unit,
+    onUpdateFound: (UpdateInfo) -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -1015,11 +1034,55 @@ private fun SettingsDialog(
                         onToggle = onToggleHaptic
                     )
                     SettingsToggle(
-                        icon = if (isNotificationsEnabled) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff, 
-                        title = "Notifications", 
-                        isEnabled = isNotificationsEnabled, 
+                        icon = if (isNotificationsEnabled) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsOff,
+                        title = "Notifications",
+                        isEnabled = isNotificationsEnabled,
                         onToggle = onToggleNotifications
                     )
+                }
+
+                // Check for Updates
+                val coroutineScope = rememberCoroutineScope()
+                var updateCheckState by remember { mutableStateOf<String?>(null) } // null=idle, "checking", "up_to_date", "found"
+                Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0x14FFFFFF)).padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = updateCheckState != "checking") {
+                                coroutineScope.launch {
+                                    updateCheckState = "checking"
+                                    val info = updateManager.checkUpdate()
+                                    if (info != null) {
+                                        updateCheckState = "found"
+                                        kotlinx.coroutines.delay(400)
+                                        onUpdateFound(info)
+                                    } else {
+                                        updateCheckState = "up_to_date"
+                                    }
+                                }
+                            }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(
+                                imageVector = Icons.Rounded.SystemUpdate,
+                                contentDescription = null,
+                                tint = when (updateCheckState) {
+                                    "found" -> Color(0xFF10B981)
+                                    "up_to_date" -> Color(0xFF22D3EE)
+                                    else -> Color(0xFF22D3EE)
+                                },
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(text = "Check for Updates", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                        when (updateCheckState) {
+                            "checking" -> CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color(0xFF8B5CF6), strokeWidth = 2.dp)
+                            "up_to_date" -> Text("Up to date ✓", color = Color(0xFF22D3EE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            "found" -> Text("Update found!", color = Color(0xFF10B981), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            else -> Icon(imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp))
+                        }
+                    }
                 }
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(text = "🎨 VISUAL THEME", color = Color(0xFF8B5CF6), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -1132,29 +1195,136 @@ fun DecorativeBlock(color: Color, points: List<Pair<Int, Int>>, modifier: Modifi
 fun UpdateDialog(
     updateInfo: UpdateInfo,
     onDismiss: () -> Unit,
-    onUpdate: () -> Unit
+    onUpdate: () -> Unit,
+    updateManager: UpdateManager
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "New Update Available") },
-        text = {
-            Column {
-                Text(text = "Version: ${updateInfo.versionName}")
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = updateInfo.updateMessage)
-            }
-        },
-        confirmButton = {
-            Button(onClick = onUpdate) {
-                Text("Update Now")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Later")
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf(0) }
+    var verificationFailed by remember { mutableStateOf(false) }
+
+    Dialog(
+        onDismissRequest = { if (!updateInfo.forceUpdate && !isDownloading) onDismiss() },
+        properties = DialogProperties(dismissOnBackPress = !updateInfo.forceUpdate, dismissOnClickOutside = false, usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFF1E1B4B), Color(0xFF0F172A))))
+                .border(1.5.dp, Color(0x448B5CF6), RoundedCornerShape(24.dp))
+                .padding(24.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                // Icon + title
+                Icon(
+                    imageVector = Icons.Rounded.SystemUpdate,
+                    contentDescription = null,
+                    tint = Color(0xFFA855F7),
+                    modifier = Modifier.size(40.dp)
+                )
+                Text(
+                    text = if (updateInfo.forceUpdate) "Required Update" else "Update Available",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                )
+
+                // Version badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0x228B5CF6))
+                        .border(1.dp, Color(0x558B5CF6), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text(text = "v${updateInfo.versionName}", color = Color(0xFFA855F7), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Update message
+                Text(
+                    text = updateInfo.updateMessage,
+                    color = Color(0xFFCBD5E1),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                if (updateInfo.forceUpdate) {
+                    Text(
+                        text = "⚠️ This update is required to continue playing.",
+                        color = Color(0xFFFBBF24),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                if (verificationFailed) {
+                    Text(
+                        text = "❌ Download verification failed. Please try again.",
+                        color = Color(0xFFEF4444),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Progress bar
+                if (isDownloading) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        LinearProgressIndicator(
+                            progress = { downloadProgress / 100f },
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                            color = Color(0xFFA855F7),
+                            trackColor = Color(0x33FFFFFF)
+                        )
+                        Text(
+                            text = "Downloading... $downloadProgress%",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                    }
+                }
+
+                // Buttons
+                if (!isDownloading) {
+                    Button(
+                        onClick = {
+                            isDownloading = true
+                            verificationFailed = false
+                            updateManager.downloadAndInstall(
+                                apkUrl = updateInfo.apkUrl,
+                                versionName = updateInfo.versionName,
+                                expectedSha256 = updateInfo.sha256,
+                                onProgress = { downloadProgress = it },
+                                onSuccess = { onUpdate() },
+                                onError = { isDownloading = false; verificationFailed = true }
+                            )
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .background(
+                                Brush.horizontalGradient(listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                    ) {
+                        Text("Update Now", color = Color.White, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                    }
+
+                    if (!updateInfo.forceUpdate) {
+                        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                            Text("Skip this version", color = Color(0xFF94A3B8), fontSize = 13.sp)
+                        }
+                    }
+                }
             }
         }
-    )
+    }
 }
 
 @Composable
