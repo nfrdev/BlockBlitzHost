@@ -69,6 +69,8 @@ private val ThemePrefKey = stringPreferencesKey("blockblitz_theme")
 private val HapticEnabledPrefKey = booleanPreferencesKey("blockblitz_haptic_enabled")
 private val NotificationsEnabledPrefKey = booleanPreferencesKey("blockblitz_notifications_enabled")
 private val SkippedVersionPrefKey = intPreferencesKey("blockblitz_skipped_version")
+private val LastUpdateReminderVersionPrefKey = intPreferencesKey("blockblitz_last_update_reminder_version")
+private val LastUpdateReminderTimePrefKey = longPreferencesKey("blockblitz_last_update_reminder_time")
 
 private data class PlayerRank(val tier: String, val title: String, val vectorIcon: androidx.compose.ui.graphics.vector.ImageVector, val nextGoal: Int)
 
@@ -121,8 +123,20 @@ class MainActivity : ComponentActivity() {
 
                 androidx.compose.runtime.LaunchedEffect(Unit) {
                     val skipped = blockBlitzDataStore.data.first()[SkippedVersionPrefKey] ?: 0
+                    val lastReminderVersion = blockBlitzDataStore.data.first()[LastUpdateReminderVersionPrefKey] ?: 0
+                    val lastReminderTime = blockBlitzDataStore.data.first()[LastUpdateReminderTimePrefKey] ?: 0L
                     val info = updateManager.checkUpdate()
-                    if (info != null && (info.forceUpdate || info.versionCode != skipped)) {
+                    val currentVersionCode = updateManager.currentVersionCode()
+                    if (info != null && UpdateManager.shouldShowUpdate(
+                            remoteVersionCode = info.versionCode,
+                            currentVersionCode = currentVersionCode,
+                            skippedVersionCode = skipped
+                        ) && UpdateManager.shouldPromptAfterReminder(
+                            remoteVersionCode = info.versionCode,
+                            lastReminderVersionCode = lastReminderVersion,
+                            lastReminderAtMs = lastReminderTime
+                        )
+                    ) {
                         updateInfo = info
                     }
                 }
@@ -133,10 +147,23 @@ class MainActivity : ComponentActivity() {
                         onDismiss = {
                             if (!info.forceUpdate) {
                                 lifecycleScope.launch {
-                                    blockBlitzDataStore.edit { it[SkippedVersionPrefKey] = info.versionCode }
+                                    blockBlitzDataStore.edit {
+                                        it[SkippedVersionPrefKey] = info.versionCode
+                                        it[LastUpdateReminderVersionPrefKey] = info.versionCode
+                                        it[LastUpdateReminderTimePrefKey] = System.currentTimeMillis()
+                                    }
                                 }
                                 updateInfo = null
                             }
+                        },
+                        onRemindLater = {
+                            lifecycleScope.launch {
+                                blockBlitzDataStore.edit {
+                                    it[LastUpdateReminderVersionPrefKey] = info.versionCode
+                                    it[LastUpdateReminderTimePrefKey] = System.currentTimeMillis()
+                                }
+                            }
+                            updateInfo = null
                         },
                         onUpdate = { updateInfo = null },
                         updateManager = updateManager
@@ -1195,6 +1222,7 @@ fun DecorativeBlock(color: Color, points: List<Pair<Int, Int>>, modifier: Modifi
 fun UpdateDialog(
     updateInfo: UpdateInfo,
     onDismiss: () -> Unit,
+    onRemindLater: () -> Unit,
     onUpdate: () -> Unit,
     updateManager: UpdateManager
 ) {
@@ -1241,6 +1269,22 @@ fun UpdateDialog(
                     Text(text = "v${updateInfo.versionName}", color = Color(0xFFA855F7), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
 
+                val updateType = updateInfo.updateType.lowercase()
+                val updateTypeLabel = when (updateType) {
+                    "required" -> "Required"
+                    "critical" -> "Critical"
+                    else -> "Optional"
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (updateType == "critical") Color(0x33EF4444) else Color(0x2200C2A8))
+                        .border(1.dp, if (updateType == "critical") Color(0xFFEF4444) else Color(0xFF10B981), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(text = updateTypeLabel, color = if (updateType == "critical") Color(0xFFFCA5A5) else Color(0xFF86EFAC), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
                 // Update message
                 Text(
                     text = updateInfo.updateMessage,
@@ -1248,6 +1292,29 @@ fun UpdateDialog(
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center
                 )
+
+                if (updateInfo.changelog.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0x14FFFFFF))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(text = "What's new", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        updateInfo.changelog.forEach { item ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(text = "•", color = Color(0xFFA855F7), fontSize = 14.sp)
+                                Text(text = item, color = Color(0xFFCBD5E1), fontSize = 12.sp, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
 
                 if (updateInfo.forceUpdate) {
                     Text(
@@ -1317,8 +1384,16 @@ fun UpdateDialog(
                     }
 
                     if (!updateInfo.forceUpdate) {
-                        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                            Text("Skip this version", color = Color(0xFF94A3B8), fontSize = 13.sp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            TextButton(onClick = onRemindLater, modifier = Modifier.weight(1f)) {
+                                Text("Remind later", color = Color(0xFF94A3B8), fontSize = 12.sp)
+                            }
+                            TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                                Text("Skip this version", color = Color(0xFF94A3B8), fontSize = 12.sp)
+                            }
                         }
                     }
                 }

@@ -23,6 +23,26 @@ class UpdateManager(private val context: Context) {
         private const val VERSION_JSON_URL =
             "https://raw.githubusercontent.com/nfrdev/BlockBlitzHost/feature/blockblitz/version.json"
         private const val TIMEOUT_MS = 5_000
+        private const val REMINDER_INTERVAL_MS = 24L * 60L * 60L * 1000L
+
+        fun shouldShowUpdate(
+            remoteVersionCode: Int,
+            currentVersionCode: Int,
+            skippedVersionCode: Int
+        ): Boolean {
+            if (remoteVersionCode <= currentVersionCode) return false
+            return remoteVersionCode != skippedVersionCode
+        }
+
+        fun shouldPromptAfterReminder(
+            remoteVersionCode: Int,
+            lastReminderVersionCode: Int,
+            lastReminderAtMs: Long,
+            reminderIntervalMs: Long = REMINDER_INTERVAL_MS
+        ): Boolean {
+            if (lastReminderVersionCode != remoteVersionCode) return true
+            return (System.currentTimeMillis() - lastReminderAtMs) >= reminderIntervalMs
+        }
     }
 
     /** Returns UpdateInfo if an update is available, null otherwise. */
@@ -38,11 +58,10 @@ class UpdateManager(private val context: Context) {
                     val updateInfo = json.decodeFromString<UpdateInfo>(content)
 
                     val currentVersionCode = currentVersionCode()
-                    if (updateInfo.versionCode > currentVersionCode) {
-                        return@withContext updateInfo
-                    } else {
+                    if (updateInfo.versionCode <= currentVersionCode) {
                         return@withContext null
                     }
+                    return@withContext updateInfo
                 } catch (e: Exception) {
                     e.printStackTrace()
                     if (attempt == 2) return@withContext null

@@ -1,8 +1,16 @@
 {
-  "versionCode": 4,
-  "versionName": "1.3.1",
-  "apkUrl": "https://github.com/nfrdev/BlockBlitzHost/releases/download/v1.3.0/app-release.apk",
-  "updateMessage": "New features and bug fixes!",
+  "versionCode": 5,
+  "versionName": "1.3.2",
+  "apkUrl": "https://github.com/nfrdev/BlockBlitzHost/releases/download/v1.3.2/app-release.apk",
+  "updateMessage": "Fixes to the update-check flow and release metadata sync.",
   "forceUpdate": false,
-  "sha256": "F0CBB1028D133C583A26672C59E2441F83C09C8CFC8ED7A4897C082FE79D98AA"
+  "minimumRequiredVersionCode": 4,
+  "updateType": "optional",
+  "releaseDate": "2026-08-31",
+  "changelog": [
+    "Fixed the repeated update prompt bug.",
+    "Added a smarter reminder flow for later updates.",
+    "Improved release metadata for future app updates."
+  ],
+  "sha256": "5CD0AAC6574093234CC9C267D3497EA59148F42731E8757B88D6D63670A2FFD3"
 }

@@ -32,8 +32,8 @@ android {
         applicationId = "com.nfrdev.blockblitzhost"
         minSdk = 23
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.3.1"
+        versionCode = 5
+        versionName = "1.3.2"
     }
 
     buildTypes {
