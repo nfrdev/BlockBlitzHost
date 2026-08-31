@@ -159,8 +159,8 @@ class GameEngine(initialState: ViewState = ViewState()) {
                     } else {
                         nextState = state.copy(gameStatus = GameStatus.Running)
                     }
-                    emit(nextState)
                     nextState = adjustLockDelay(nextState, action)
+                    emit(nextState)
                 }
             }
 
@@ -176,8 +176,8 @@ class GameEngine(initialState: ViewState = ViewState()) {
                         score = state.score + softDropBonus,
                         lastActionWasRotation = false
                     )
-                    emit(nextState)
                     nextState = adjustLockDelay(nextState, action)
+                    emit(nextState)
                 }
             }
 
@@ -190,8 +190,8 @@ class GameEngine(initialState: ViewState = ViewState()) {
                         spirit = rotated,
                         lastActionWasRotation = true
                     )
-                    emit(nextState)
                     nextState = adjustLockDelay(nextState, action)
+                    emit(nextState)
                 }
             }
 
@@ -220,12 +220,13 @@ class GameEngine(initialState: ViewState = ViewState()) {
                             spirit = movedDown,
                             lastActionWasRotation = false
                         )
-                        emit(nextState)
                         nextState = adjustLockDelay(nextState, action)
+                        emit(nextState)
                         return
                     }
                 }
                 nextState = adjustLockDelay(state, action)
+                emit(nextState)
             }
 
             Action.Hold -> {
@@ -269,8 +270,8 @@ class GameEngine(initialState: ViewState = ViewState()) {
                     lockDelayResets = 0,
                     lastActionWasRotation = false
                 )
-                emit(nextState)
                 nextState = adjustLockDelay(nextState, action)
+                emit(nextState)
             }
 
             Action.LockPiece -> {
@@ -281,6 +282,11 @@ class GameEngine(initialState: ViewState = ViewState()) {
                     }
                 }
                 lockPieceAndAdvance(state)
+            }
+
+            is Action.SyncPrefs -> {
+                nextState = state.copy(isMute = action.isMute, isHaptic = action.isHaptic)
+                emit(nextState)
             }
 
             Action.Mute -> {
@@ -542,19 +548,17 @@ class GameEngine(initialState: ViewState = ViewState()) {
         val isRunning get() = gameStatus == GameStatus.Running
 
         val blockSet: Set<Pair<Int, Int>>
-            get() = cachedBlockSet ?: bricks.map { it.location.x.toInt() to it.location.y.toInt() }.toSet()
+            get() = bricks.map { it.location.x.toInt() to it.location.y.toInt() }.toSet()
 
         val ghostPiece: List<Point>
-            get() = cachedGhostPiece ?: run {
-                if (spirit == Empty || !isRunning) emptyList()
-                else {
-                    val bs = blockSet
-                    var dropDistance = 0
-                    while (spirit.moveBy(0 to (dropDistance + 1)).isValidInMatrix(bs, matrix)) {
-                        dropDistance++
-                    }
-                    spirit.moveBy(0 to dropDistance).location
+            get() = if (spirit == Empty || !isRunning) emptyList()
+            else {
+                val bs = blockSet
+                var dropDistance = 0
+                while (spirit.moveBy(0 to (dropDistance + 1)).isValidInMatrix(bs, matrix)) {
+                    dropDistance++
                 }
+                spirit.moveBy(0 to dropDistance).location
             }
 
         fun withDerived(): ViewState {
@@ -578,6 +582,7 @@ sealed interface Action {
     data object Drop : Action
     data object GameTick : Action
     data object Mute : Action
+    data class SyncPrefs(val isMute: Boolean, val isHaptic: Boolean) : Action
     data object HapticToggle : Action
     data object Hold : Action
     data object LockPiece : Action

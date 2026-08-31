@@ -626,8 +626,8 @@ fun BlockBlitzScreen(
                         }
 
                         state.bricks.forEach { brick ->
-                            val x = brick.location.x
-                            val y = brick.location.y
+                            val x = brick.location.x.toInt()
+                            val y = brick.location.y.toInt()
                             val color = activeBrickColors.getOrElse(brick.colorIndex) { Color(0xFF60A5FA) }
 
                             drawRoundRect(
@@ -645,10 +645,12 @@ fun BlockBlitzScreen(
                         }
 
                         state.ghostPiece.forEach { point ->
+                            val x = point.x.toInt()
+                            val y = point.y.toInt()
                             val color = activeBrickColors.getOrElse(state.spirit.colorIndex) { Color(0xFF34D399) }
                             drawRoundRect(
                                 color = color.copy(alpha = 0.2f),
-                                topLeft = Offset(point.x * cellWidth + 1f, point.y * cellHeight + 1f),
+                                topLeft = Offset(x * cellWidth + 1f, y * cellHeight + 1f),
                                 size = Size(cellWidth - 2f, cellHeight - 2f),
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f),
                                 style = Stroke(width = 2f)
@@ -656,17 +658,19 @@ fun BlockBlitzScreen(
                         }
 
                         state.spirit.location.forEach { point ->
+                            val x = point.x.toInt()
+                            val y = point.y.toInt()
                             val color = activeBrickColors.getOrElse(state.spirit.colorIndex) { Color(0xFF34D399) }
 
                             drawRoundRect(
                                 color = color,
-                                topLeft = Offset(point.x * cellWidth + 1f, point.y * cellHeight + 1f),
+                                topLeft = Offset(x * cellWidth + 1f, y * cellHeight + 1f),
                                 size = Size(cellWidth - 2f, cellHeight - 2f),
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
                             )
                             drawRoundRect(
                                 color = Color.White.copy(alpha = 0.25f),
-                                topLeft = Offset(point.x * cellWidth + 3f, point.y * cellHeight + 3f),
+                                topLeft = Offset(x * cellWidth + 3f, y * cellHeight + 3f),
                                 size = Size(cellWidth / 3f, cellHeight / 3f),
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5f, 1.5f)
                             )

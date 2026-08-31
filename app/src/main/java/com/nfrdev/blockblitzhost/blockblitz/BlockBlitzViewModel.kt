@@ -222,7 +222,7 @@ class BlockBlitzViewModel(
                 isHaptic = isHaptic
             )
             // Synchronize engine state with the user's saved preferences
-            engine.dispatch(Action.ResetWithPrefs(isMuted, isHaptic))
+            engine.dispatch(Action.SyncPrefs(isMuted, isHaptic))
         }
 
         var lastSavedStatus = restoredState.gameStatus

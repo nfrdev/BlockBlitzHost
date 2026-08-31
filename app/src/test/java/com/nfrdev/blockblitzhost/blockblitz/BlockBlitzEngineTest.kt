@@ -126,6 +126,26 @@ class BlockBlitzEngineTest {
     }
 
     @Test
+    fun `brick cache refreshes when board state changes`() {
+        val state = GameEngine.ViewState(
+            bricks = listOf(Brick(Point.of(2, 18))),
+            spirit = Spirit(
+                shape = listOf(Point.of(0, 0)),
+                offset = Point.of(5, 5),
+                pieceType = PieceType.O,
+            ),
+            gameStatus = GameStatus.Running,
+            matrix = 10 to 20
+        ).withDerived()
+
+        val updated = state.copy(bricks = listOf(Brick(Point.of(4, 18))))
+        val recomputed = updated.withDerived()
+
+        assertEquals(setOf(4 to 18), recomputed.blockSet)
+        assertTrue("Board cache must reflect the new brick positions", recomputed.blockSet != state.blockSet)
+    }
+
+    @Test
     fun `O piece does not drift when rotated`() {
         val blockSet = emptySet<Pair<Int, Int>>()
         val matrix = 10 to 20
