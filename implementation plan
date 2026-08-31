@@ -1,0 +1,29 @@
+# Implementation Plan - Fix Block Overlapping and Preferences
+
+This plan addresses the block overlapping issues during Game Over and Hold actions, fixes the preference reset on app launch/new game, and repairs the timing issue in the line clear unit test.
+
+## Proposed Changes
+
+### Game View Model & Engine
+
+#### [MODIFY] [GameViewModel.kt](file:///c:/Users/Nafira/OneDrive/Desktop/BlockBlitzHost/app/src/main/java/com/nfrdev/blockblitzhost/blockblitz/GameViewModel.kt)
+- Add `ResetWithPrefs(val isMute: Boolean, val isHaptic: Boolean)` to the `Action` sealed interface to allow initializing/resetting the game with the user's saved preferences.
+- Handle `Action.ResetWithPrefs` in `processAction` by initializing the view state with the provided settings.
+- Ensure the active `spirit` is cleared (set to `Spirit.Empty`) on all `GameStatus.GameOver` states (including the top-out check, the post-line-clear delay check, the non-line-clear check, and the `Action.GameOver` action handler) to prevent the final piece from overlapping with the locked bricks on screen.
+- Modify `Action.Hold` to validate if the held piece can be spawned in the matrix. If it overlaps with locked bricks, trigger `GameStatus.GameOver` and set `spirit = Spirit.Empty` rather than allowing it to spawn overlapping existing blocks.
+
+### Block Blitz View Model
+
+#### [MODIFY] [BlockBlitzViewModel.kt](file:///c:/Users/Nafira/OneDrive/Desktop/BlockBlitzHost/app/src/main/java/com/nfrdev/blockblitzhost/blockblitz/BlockBlitzViewModel.kt)
+- In the `init` block, synchronize the loaded Datastore preferences to the engine using `Action.ResetWithPrefs(isMuted, isHaptic)` instead of the argument-less `Action.Reset`.
+- In `dispatch()`, intercept `Action.Reset` and delegate it to the engine as `Action.ResetWithPrefs(uiState.value.isMute, uiState.value.isHaptic)`.
+
+### Unit Tests
+
+#### [MODIFY] [BlockBlitzEngineTest.kt](file:///c:/Users/Nafira/OneDrive/Desktop/BlockBlitzHost/app/src/test/java/com/nfrdev/blockblitzhost/blockblitz/BlockBlitzEngineTest.kt)
+- In the `line clear scenario produces score and board update` test, increase the delay after the second `GameTick` from `400` to `1000` milliseconds. This ensures both the lock delay (500ms) and line-clear animation delay (200ms) complete before asserting the final game state.
+
+## Verification Plan
+
+### Automated Tests
+- Run `.\gradlew.bat test` to verify that all unit tests build and pass successfully.

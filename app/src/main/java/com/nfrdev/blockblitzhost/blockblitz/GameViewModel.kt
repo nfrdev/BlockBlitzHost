@@ -98,6 +98,22 @@ class GameEngine(initialState: ViewState = ViewState()) {
                 emit(nextState)
             }
 
+            is Action.ResetWithPrefs -> {
+                animationJob?.cancel()
+                lockDelayJob?.cancel()
+                lockDelayJob = null
+                val bag = generate7Bag(state.matrix)
+                nextState = ViewState(
+                    gameStatus = GameStatus.Running,
+                    spirit = bag.first(),
+                    spiritReserve = bag.drop(1),
+                    isMute = action.isMute,
+                    isHaptic = action.isHaptic,
+                    highScore = state.highScore
+                )
+                emit(nextState)
+            }
+
             Action.Pause -> {
                 if (state.isRunning) {
                     lockDelayJob?.cancel()
@@ -111,7 +127,7 @@ class GameEngine(initialState: ViewState = ViewState()) {
                 lockDelayJob?.cancel()
                 lockDelayJob = null
                 animationJob?.cancel()
-                nextState = state.copy(gameStatus = GameStatus.GameOver)
+                nextState = state.copy(gameStatus = GameStatus.GameOver, spirit = Empty)
                 emit(nextState)
             }
 
@@ -218,6 +234,17 @@ class GameEngine(initialState: ViewState = ViewState()) {
                     nextReserve = state.spiritReserve
                 }
 
+                if (!nextSpirit.isValidInMatrix(blockSet, state.matrix)) {
+                    nextState = state.copy(
+                        gameStatus = GameStatus.GameOver,
+                        spirit = Empty,
+                        heldSpirit = nextHeld,
+                        hasHeld = true
+                    )
+                    emit(nextState)
+                    return
+                }
+
                 nextState = state.copy(
                     spirit = nextSpirit,
                     spiritReserve = nextReserve,
@@ -260,7 +287,7 @@ class GameEngine(initialState: ViewState = ViewState()) {
 
         // Top-Out / Lock-Out Game Over check
         if (!state.spirit.isValidInMatrix(blockSet, state.matrix) || state.spirit.location.any { it.y < 0 }) {
-            emit(state.copy(gameStatus = GameStatus.GameOver))
+            emit(state.copy(gameStatus = GameStatus.GameOver, spirit = Empty))
             return
         }
 
@@ -380,6 +407,7 @@ class GameEngine(initialState: ViewState = ViewState()) {
                             score = newScore,
                             line = newLines,
                             gameStatus = GameStatus.GameOver,
+                            spirit = Empty,
                             combo = newCombo,
                             backToBack = newB2B,
                             tSpinCount = state.tSpinCount,
@@ -413,6 +441,7 @@ class GameEngine(initialState: ViewState = ViewState()) {
                         bricks = noClear,
                         score = newScore,
                         gameStatus = GameStatus.GameOver,
+                        spirit = Empty,
                         combo = newCombo,
                         backToBack = newB2B,
                         scorePopAmount = earnedPoints,
@@ -526,6 +555,7 @@ typealias GameViewModel = GameEngine
 sealed interface Action {
     data class Move(val direction: Direction) : Action
     data object Reset : Action
+    data class ResetWithPrefs(val isMute: Boolean, val isHaptic: Boolean) : Action
     data object Pause : Action
     data object Resume : Action
     data object Rotate : Action

@@ -30,9 +30,9 @@ class BlockBlitzEngineTest {
         // Move down once to touch bottom line
         engine.dispatch(Action.GameTick)
         delay(50)
-        // Next tick triggers lock and line clear
+        // Next tick triggers lock and line clear; wait for both lock and clear animation delays
         engine.dispatch(Action.GameTick)
-        delay(400)
+        delay(1000)
 
         val state = engine.viewState.value
         assertEquals(GameStatus.Running, state.gameStatus)

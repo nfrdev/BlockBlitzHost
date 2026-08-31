@@ -221,8 +221,8 @@ class BlockBlitzViewModel(
                 isMute = isMuted,
                 isHaptic = isHaptic
             )
-            // Synchronize engine state
-            engine.dispatch(Action.Reset) // Trigger initial state update with correct prefs
+            // Synchronize engine state with the user's saved preferences
+            engine.dispatch(Action.ResetWithPrefs(isMuted, isHaptic))
         }
 
         var lastSavedStatus = restoredState.gameStatus
@@ -337,6 +337,8 @@ class BlockBlitzViewModel(
     fun dispatch(action: Action) {
         if (action == Action.Reset) {
             _blitzTimeRemaining.value = 120
+            engine.dispatch(Action.ResetWithPrefs(uiState.value.isMute, uiState.value.isHaptic))
+            return
         }
         if (action == Action.Mute) {
             viewModelScope.launch {

@@ -38,7 +38,7 @@ app/build/outputs/apk/release/app-release.apk
 ### Step 3: Get the APK Checksum (SHA-256)
 Run this command in PowerShell to get the security checksum of your newly generated APK:
 ```powershell
-Get-FileHash app\build\outputs\apk\release\app-release.apk -Algorithm SHA256
+(Get-FileHash .\app\build\outputs\apk\release\app-release.apk -Algorithm SHA256).Hash
 ```
 Copy the hash output (it will be a long string of letters and numbers).
 
