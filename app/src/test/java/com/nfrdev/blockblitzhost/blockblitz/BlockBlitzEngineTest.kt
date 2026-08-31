@@ -87,6 +87,19 @@ class BlockBlitzEngineTest {
     }
 
     @Test
+    fun `pieces cannot occupy negative or overlapping matrix coordinates`() {
+        val blockSet = setOf(4 to 0)
+        val matrix = 10 to 20
+        val overlappingPiece = Spirit(
+            shape = listOf(Point.of(0, 0), Point.of(1, 0)),
+            offset = Point.of(3, -1),
+            pieceType = PieceType.O
+        )
+
+        assertTrue("Negative Y cells are invalid and should not overlap the board", !overlappingPiece.isValidInMatrix(blockSet, matrix))
+    }
+
+    @Test
     fun `O piece does not drift when rotated`() {
         val blockSet = emptySet<Pair<Int, Int>>()
         val matrix = 10 to 20

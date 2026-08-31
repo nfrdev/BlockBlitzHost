@@ -168,8 +168,8 @@ fun BlockBlitzScreen(
     }
 
     val flashAlpha by animateFloatAsState(
-        targetValue = if (state.gameStatus == GameStatus.LineClearing) 0.6f else 0f,
-        animationSpec = tween(durationMillis = 150),
+        targetValue = if (state.gameStatus == GameStatus.LineClearing) 0.7f else 0f,
+        animationSpec = tween(durationMillis = 220),
         label = "LineClearFlash"
     )
 
@@ -202,7 +202,7 @@ fun BlockBlitzScreen(
                 )
             }
             particles = newParticles
-            delay(350)
+            delay(300)
             particles = emptyList()
         }
         

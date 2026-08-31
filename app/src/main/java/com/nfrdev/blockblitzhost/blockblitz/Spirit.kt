@@ -108,7 +108,7 @@ fun Spirit.isValidInMatrix(blockSet: Set<Pair<Int, Int>>, matrix: Pair<Int, Int>
     return location.all { pt ->
         val x = pt.x.toInt()
         val y = pt.y.toInt()
-        x in 0 until matrix.first && y < matrix.second && !blockSet.contains(x to y)
+        x in 0 until matrix.first && y in 0 until matrix.second && !blockSet.contains(x to y)
     }
 }
 

@@ -396,7 +396,7 @@ class GameEngine(initialState: ViewState = ViewState()) {
 
             animationJob?.cancel()
             animationJob = scope.launch {
-                delay(200)
+                delay(300)
 
                 if (_viewState.value.gameStatus != GameStatus.LineClearing) return@launch
 
