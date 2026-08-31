@@ -1,16 +1,17 @@
 {
-  "versionCode": 5,
-  "versionName": "1.3.2",
-  "apkUrl": "https://github.com/nfrdev/BlockBlitzHost/releases/download/v1.3.2/app-release.apk",
-  "updateMessage": "Fixes to the update-check flow and release metadata sync.",
+  "versionCode": 6,
+  "versionName": "1.3.3",
+  "apkUrl": "https://github.com/nfrdev/BlockBlitzHost/releases/download/v1.3.3/app-release.apk",
+  "updateMessage": "Fixes for block overlap, hold-spawn validation, line-clear timing, and reset state cleanup.",
   "forceUpdate": false,
-  "minimumRequiredVersionCode": 4,
+  "minimumRequiredVersionCode": 5,
   "updateType": "optional",
   "releaseDate": "2026-08-31",
   "changelog": [
-    "Fixed the repeated update prompt bug.",
-    "Added a smarter reminder flow for later updates.",
-    "Improved release metadata for future app updates."
+    "Fixed stale board state during reset and new-game starts.",
+    "Corrected overlap checks for invalid piece positions and hold re-spawns.",
+    "Improved line-clear animation timing and visual clarity.",
+    "Added regression tests for reset and overlap edge cases."
   ],
-  "sha256": "5CD0AAC6574093234CC9C267D3497EA59148F42731E8757B88D6D63670A2FFD3"
+  "sha256": ""
 }

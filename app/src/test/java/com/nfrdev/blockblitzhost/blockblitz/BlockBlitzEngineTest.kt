@@ -87,6 +87,32 @@ class BlockBlitzEngineTest {
     }
 
     @Test
+    fun `reset clears existing bricks before spawning a new piece`() = runBlocking {
+        val engine = GameEngine(
+            GameEngine.ViewState(
+                bricks = (0 until 5).map { Brick(Point.of(it, 18)) },
+                spirit = Spirit(
+                    shape = listOf(Point.of(0, 0)),
+                    offset = Point.of(5, 18),
+                    pieceType = PieceType.O
+                ),
+                matrix = 10 to 20,
+                gameStatus = GameStatus.GameOver,
+                score = 999,
+                line = 20
+            )
+        )
+
+        engine.dispatch(Action.Reset)
+        delay(50)
+
+        val state = engine.viewState.value
+        assertEquals(GameStatus.Running, state.gameStatus)
+        assertTrue("New-game reset should clear leftover blocks", state.bricks.isEmpty())
+        assertTrue("Spawned piece should be valid in the empty board", state.spirit.isValidInMatrix(emptySet(), state.matrix))
+    }
+
+    @Test
     fun `pieces cannot occupy negative or overlapping matrix coordinates`() {
         val blockSet = setOf(4 to 0)
         val matrix = 10 to 20

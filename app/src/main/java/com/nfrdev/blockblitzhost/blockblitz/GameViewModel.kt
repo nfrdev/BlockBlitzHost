@@ -89,9 +89,17 @@ class GameEngine(initialState: ViewState = ViewState()) {
                 lockDelayJob = null
                 val bag = generate7Bag(state.matrix)
                 nextState = ViewState(
+                    bricks = emptyList(),
                     gameStatus = GameStatus.Running,
                     spirit = bag.first(),
                     spiritReserve = bag.drop(1),
+                    score = 0,
+                    line = 0,
+                    combo = 0,
+                    backToBack = false,
+                    heldSpirit = Empty,
+                    hasHeld = false,
+                    clearedIndices = emptySet(),
                     isMute = state.isMute,
                     highScore = state.highScore
                 )
@@ -104,9 +112,17 @@ class GameEngine(initialState: ViewState = ViewState()) {
                 lockDelayJob = null
                 val bag = generate7Bag(state.matrix)
                 nextState = ViewState(
+                    bricks = emptyList(),
                     gameStatus = GameStatus.Running,
                     spirit = bag.first(),
                     spiritReserve = bag.drop(1),
+                    score = 0,
+                    line = 0,
+                    combo = 0,
+                    backToBack = false,
+                    heldSpirit = Empty,
+                    hasHeld = false,
+                    clearedIndices = emptySet(),
                     isMute = action.isMute,
                     isHaptic = action.isHaptic,
                     highScore = state.highScore
@@ -230,7 +246,7 @@ class GameEngine(initialState: ViewState = ViewState()) {
                     nextSpirit = reserve.first()
                     nextReserve = reserve.drop(1).ifEmpty { generate7Bag(state.matrix) }
                 } else {
-                    nextSpirit = state.heldSpirit
+                    nextSpirit = state.heldSpirit.toSpawnState(state.matrix)
                     nextReserve = state.spiritReserve
                 }
 
